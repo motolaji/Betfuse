@@ -1,4 +1,8 @@
 {
-  "name": "betfuse",
-  "displayName": "betfuse"
+    "name": "betfuse",
+    "displayName": "betfuse",
+    "react-native-google-mobile-ads": {
+        "android_app_id": "ca-app-pub-2600707325739955~6158824444",
+        "ios_app_id": "ca-app-pub-2600707325739955~9155688721"
+    }
 }

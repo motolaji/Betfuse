@@ -1,176 +1,194 @@
-import { Image, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
-import React from 'react';
-import { DataLog } from '../components/data';
+import firestore from '@react-native-firebase/firestore';
+// import getDocs from '@react-native-firebase/firestore';
+import {Image, StyleSheet, Text, TouchableOpacity, View, FlatList, } from 'react-native';
+import { ScrollView } from 'react-native';
+import React, {useState, useEffect} from 'react';
+import { Datalog} from '../components/data';
+import mobileAds from 'react-native-google-mobile-ads';
+import { AppOpenAd, InterstitialAd, RewardedAd, BannerAd, TestIds, BannerAdSize, AdEventType,  } from 'react-native-google-mobile-ads';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+import Today from '../screens/Today';
+import Future from '../screens/Future';
+import Previous from '../screens/Previous';
+import { useWindowDimensions } from 'react-native';
+import { Dimensions } from "react-native";
+
+
+
+
+
+//ca-app-pub-3940256099942544/6300978111 banner
+//ca-app-pub-3940256099942544/1033173712 interstitial
+//ca-app-pub-3940256099942544/8691691433 interstitial video
+
+
+mobileAds()
+  .initialize()
+  .then((adapterStatuses) => {
+    // Initialization complete!
+  });
+   const adUnitIds = __DEV__? TestIds.BANNER : 'ca-app-pub-3940256099942544/6300978111';   //const adUnitIds = __DEV__ ? TestIds.BANNER : 'ca-app-pub-2600707325739955/1594244540';
+  
+  const adUnitId = __DEV__? TestIds.INTERSTITIAL : 'ca-app-pub-2600707325739955/3531417831';
+
+  
+  
+
+
+
+
+  const interstitial = InterstitialAd.createForAdRequest(adUnitId, {
+    requestNonPersonalizedAdsOnly: false,
+    // keywords: ['fashion', 'clothing'],
+  });
+
+
+
+
+
+
+
+
+
+
+  const Tab = createMaterialTopTabNavigator();
+
 
 const Bet = ({navigation}) => {
+
+  const { height, width } = useWindowDimensions();
+  const totalWidth = Dimensions.get("screen").width;
+
+  const [loaded, setLoaded] = useState(false);
+  
+  const [Tips, setTips] = useState([]); 
+
+
+
+  useEffect(() => {
+    const eventListener = interstitial.onAdEvent(type => {
+      if (type === AdEventType.LOADED) {
+        setLoaded(true);
+      }
+      if (type === AdEventType.CLOSED) {
+        console.log("ad closed");
+        setLoaded(false);
+       
+        //reload ad 
+        interstitial.load();
+      }
+    });
+
+    // Start loading the interstitial straight away
+    interstitial.load();
+
+    // Unsubscribe from events on unmount
+    return () => {
+      eventListener();
+    };
+    
+  }, []);
+  
+  // No advert ready to show yet
+ 
+
+  
+  useEffect(() => {
+  const getAssets = async () =>{
+
+    try {
+       const list = [];
+      
+      await firestore().collection("Tips").get()
+       .then((querySnapshot) =>{
+          querySnapshot.forEach((doc) =>{
+             list.push({...doc.data(), id: doc.id});
+          });
+         setTips(list);
+       });
+       console.log('see', setTips); 
+    } catch (e) {
+       setErrors("Failed To Load Data");
+    } 
+ };
+ getAssets(); 
+}, [setTips]); 
+
+
+
+
   return (
     <View style={styles.container}>
-      <View style={styles.top}>
-        <Text style={styles.text}>Tips</Text>
-        <Image style={styles.image}
+     <View style={styles.header}>
+     <Text style={styles.text}>Tips</Text>
+     <Image style={styles.image}
            source={{
              uri: 'https://i.ibb.co/HBr0Tyc/betfuse.jpg',}}/>
-      </View>
-      <View style={styles.dateBox}>
-        <Text style={styles.dateText}>20</Text>
-        <Text style={styles.dateText}>21</Text>
-        <Text style={styles.dateTextM}>Today</Text>
-        <Text style={styles.dateText}>24</Text>
-        <Text style={styles.dateText}>25</Text>
-      </View>
-      <ScrollView style={styles.options}>
-      {DataLog.map((item) => {
-        return (
-        <TouchableOpacity style={styles.game} onPress={()=>navigation.navigate('Result', )}>
-        <View style={styles.gameM} key={item.id}>
-        <View style={styles.circle1}>
-            <Image style={styles.image1} source={item.club1}/>
-            </View>
-            <Text style={styles.scoreBoard}>{item.score1}-{item.score2}</Text>
-            <View style={styles.circle2}>
-            <Image style={styles.image2} source={item.club2}/>
-            </View>
-        </View>
-        </TouchableOpacity>
-        );
-      })}
-      </ScrollView>
-      <View style={styles.bottom}>
-      <TouchableOpacity>
-     <Text>SKIP</Text>
-   </TouchableOpacity>
-    <TouchableOpacity>
-    <Text>NEXT</Text>
-  </TouchableOpacity>
-  <TouchableOpacity onPress={()=>navigation.navigate("Result")}>
-    <Text>
-      END
-    </Text>
-  </TouchableOpacity>
-      </View>
+     </View>
+     <Tab.Navigator style={styles.tabs}
+          screenOptions={{
+          tabBarLabelStyle: { fontSize: 14, fontWeight:'bold',justifyContent: 'center', alignItems: 'center', },
+          tabBarItemStyle: { width: totalWidth / 3, justifyContent: 'center', alignItems: 'center',},
+          tabBarStyle: { backgroundColor: '#59147F',borderBottomRightRadius:12, borderBottomLeftRadius:12,justifyContent:'center', shadowColor: "#000000",shadowOpacity: 0.8,shadowRadius: 2,shadowOffset: {  height: 1,  width: 1}},
+          tabBarIndicatorStyle:{ color:'red', width: 0.1,},
+          tabBarActiveTintColor:'#FDD200', ///
+          tabBarInactiveTintColor:'#FFF',
+          }}>
+        <Tab.Screen  name="Yesterday" component={Previous}  />
+        <Tab.Screen  name="Today" component={Today} />
+        <Tab.Screen  name="Tomorrow" component={Future} />
+      </Tab.Navigator> 
+     <View style={styles.footer}>
+     <BannerAd unitId={adUnitIds}
+     size={BannerAdSize.FULL_BANNER}
+     requestOptions={{
+        requestNonPersonalizedAdsOnly: false,}} />
+     </View>
     </View>
-     
   );
-};
+  }
+
 
 export default Bet;
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 12,
-   height: '100%'
-  },
-  top: {
-    marginVertical: 16,
-  },
-  options: {
-    marginVertical: 16,
-   flex: 1,
-    },
-    bottom: {
-      marginBottom: 12,
-      paddingVertical: 16,
-      justifyContent: 'space-between',
-      flexDirection: 'row',
-    },
-    image: {
-      marginLeft: 50,
-      resizeMode: "contain",
-      width: 100,
-      height: 50,
-      borderRadius: 1000,
-    },  
-    container:{
-      paddingTop: 70,
-      //paddingHorizontal: 20,
-      backgroundColor: '#59147F',
-      height: '100%',
-    },  
-    top:{
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    text:{
-      fontSize: 35,
-      fontWeight: 'bold',
-      color: 'white', 
-      marginLeft: 10,
-    },
-    dateBox: {
-     // width: '100%',
-      backgroundColor: "#FFFFFF",
-      width: 390,
-      height: 74,
-      borderRadius: 16,
-      marginTop: 38,
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexDirection: 'row',
-      //marginLeft: -22,
-    },
-    dateText: {
-      padding: 30,
-      fontSize: 20,
-      fontWeight: '800',
-    },
-    dateTextM: {
-      paddingTop: 8,
-      fontSize: 20,
-      fontWeight: '800',
-      color: "#FDD200",
-    },
-    game: {
-      backgroundColor: "#FDD200",
-      width: "100%", //370
-      height: "15%",
-      borderRadius: 16,
-      marginTop: 20,
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexDirection: 'row',
-     // marginLeft: 10,
-      // marginBottom: -10,
-    },
-    gameM: {
-      width: '100%',
-      height: "70%",
-      backgroundColor: "#59147F",
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexDirection: 'row',
-    },
-    options: {
-      backgroundColor: '#59147F',
-    },
-    circle1:{
-     // backgroundColor: "white",
-       height:60,
-       width: 60,
-       borderRadius: 80,
-       margin: 10,
-     },
-     circle2:{
-      // backgroundColor: "red",
-       height:60,
-       width: 60,
-       borderRadius: 80,
-       margin: 10,
-     },
-     image1:{
-      height: 60,
-      width: 60,
-      borderRadius: 80,
-      overflow: "hidden",
-    },
-    image2:{
-      height: 60,
-      width: 60,
-      borderRadius: 80,
-      overflow: "hidden",
-    },
-    scoreBoard:{
-      color: "white",
-      fontSize: 25,
-      fontWeight: '700',
-    },
+container: {
+height:'100%',
+},
+header: {
+  flexDirection: 'row',
+  backgroundColor:'#59147F',
+  flex:1,
+  alignItems: 'center',
+  justifyContent: 'center',
+  // borderBottomRightRadius:10,
+  // borderBottomLeftRadius:10,
+},
+footer: {
+  backgroundColor:'#59147F',
+  flex:0.2,
+  justifyContent: 'center',
+  alignItems: 'center',
+  width: '100%',
+  
+},
+navContainer:{
+  height:'100%',
+  backgroundColor:'red',
+},
+tabs: {
+  flex: 5,
+},
+text: {
+  marginRight:70,
+  color: 'white',
+  fontSize: 28,
+  fontWeight:'bold'
+},
+image: {
+  resizeMode: "contain",
+  width: 100,
+  height: 50,
+  borderRadius: 200,
+},   
 });
